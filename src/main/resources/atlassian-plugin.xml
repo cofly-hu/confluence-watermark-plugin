@@ -1,0 +1,22 @@
+<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.name}" plugins-version="2">
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="Example" url="http://www.example.com" />
+    </plugin-info>
+
+    <web-resource key="watermark-resources" name="Watermark Web Resources">
+        <resource type="download" name="watermark.js" location="/js/watermark.js"/>
+        <context>viewcontent</context>
+    </web-resource>
+
+    <servlet-filter key="watermark-export-filter" name="Watermark Export Filter"
+                    class="com.example.watermark.WatermarkExportFilter" weight="100">
+        <url-pattern>/spaces/flyingpdf/*</url-pattern>
+        <url-pattern>/pages/exportpage.action</url-pattern>
+        <url-pattern>/download/*</url-pattern>
+        <url-pattern>/rest/api/*/download/*</url-pattern>
+        <description>Adds watermarks to PDF exports and image/PDF downloads</description>
+    </servlet-filter>
+
+</atlassian-plugin>
