@@ -3,7 +3,13 @@
     var WATERMARK_FONT_SIZE = 16;
     var WATERMARK_SPACING = 300;
     var WATERMARK_COLOR = '128,128,128';
-    var REBUILD_INTERVAL = 1000;
+    var REBUILD_INTERVAL = 2000;
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
 
     function getWatermarkText() {
         var username = 'unknown';
@@ -27,10 +33,10 @@
             ('0' + now.getHours()).slice(-2) + ':' +
             ('0' + now.getMinutes()).slice(-2) + ':' +
             ('0' + now.getSeconds()).slice(-2);
-        return username + ' | ' + ts;
+        return escapeHtml(username + ' | ' + ts);
     }
 
-    function createWatermarkLayer(text, containerId) {
+    function createWatermarkLayer(text) {
         var layer = document.createElement('div');
         layer.setAttribute('data-wm', '1');
         layer.style.cssText =
@@ -72,26 +78,15 @@
 
     function injectWatermark() {
         var text = getWatermarkText();
-
         removeOldWatermarks();
 
-        var layer1 = createWatermarkLayer(text, 'wm-1');
+        var layer1 = createWatermarkLayer(text);
         layer1.id = '_wm_a1';
         document.documentElement.appendChild(layer1);
 
-        var layer2 = createWatermarkLayer(text, 'wm-2');
+        var layer2 = createWatermarkLayer(text);
         layer2.id = '_wm_b2';
         document.body.appendChild(layer2);
-
-        var style = document.createElement('style');
-        style.id = '_wm_s3';
-        style.setAttribute('data-wm', '1');
-        style.textContent =
-            '[data-wm]{display:block!important;visibility:visible!important;opacity:1!important}' +
-            'body::after{content:"";position:fixed!important;top:0!important;left:0!important;' +
-            'width:100%!important;height:100%!important;pointer-events:none!important;' +
-            'z-index:2147483647!important;background:transparent!important;}';
-        document.head.appendChild(style);
     }
 
     function removeOldWatermarks() {
@@ -125,16 +120,11 @@
                     var removed = m.removedNodes;
                     for (var j = 0; j < removed.length; j++) {
                         var node = removed[j];
-                        if (node.nodeType === 1 && (
-                            node.getAttribute && node.getAttribute('data-wm') === '1' ||
-                            node.id === '_wm_a1' || node.id === '_wm_b2' || node.id === '_wm_s3'
-                        )) {
+                        if (node.nodeType === 1 && node.getAttribute &&
+                            node.getAttribute('data-wm') === '1') {
                             needRebuild = true;
                             break;
                         }
-                    }
-                    if (m.target && m.target.getAttribute && m.target.getAttribute('data-wm') === '1') {
-                        needRebuild = true;
                     }
                 }
                 if (m.type === 'attributes' && m.target.getAttribute &&
@@ -156,13 +146,6 @@
             attributes: true,
             attributeFilter: ['style', 'class', 'data-wm']
         });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style', 'class', 'data-wm']
-        });
     }
 
     function init() {
@@ -176,30 +159,6 @@
             }
             disableWordExport();
         }, REBUILD_INTERVAL);
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'F12' ||
-                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) ||
-                (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
-                // 允许 DevTools 打开，但定时器会重建水印
-            }
-        });
-
-        var origRemove = Element.prototype.removeChild;
-        Element.prototype.removeChild = function(child) {
-            if (child && child.getAttribute && child.getAttribute('data-wm') === '1') {
-                setTimeout(injectWatermark, 50);
-            }
-            return origRemove.apply(this, arguments);
-        };
-
-        var origSetAttr = Element.prototype.setAttribute;
-        Element.prototype.setAttribute = function(name, value) {
-            if (this.getAttribute && this.getAttribute('data-wm') === '1' && (name === 'style' || name === 'class')) {
-                setTimeout(injectWatermark, 50);
-            }
-            return origSetAttr.apply(this, arguments);
-        };
     }
 
     if (document.readyState === 'loading') {

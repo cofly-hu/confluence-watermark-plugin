@@ -15,7 +15,6 @@ import java.awt.Color;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -80,16 +79,5 @@ public class PdfWatermarkProcessor {
                 }
             }
         }
-    }
-
-    public static InputStream addWatermark(InputStream pdfStream) throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] data = new byte[4096];
-        int bytesRead;
-        while ((bytesRead = pdfStream.read(data)) != -1) {
-            buffer.write(data, 0, bytesRead);
-        }
-        byte[] watermarkedBytes = addWatermark(buffer.toByteArray());
-        return new ByteArrayInputStream(watermarkedBytes);
     }
 }

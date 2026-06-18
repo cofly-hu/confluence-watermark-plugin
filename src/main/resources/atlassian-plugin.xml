@@ -16,7 +16,7 @@
         <url-pattern>/pages/exportpage.action</url-pattern>
         <url-pattern>/download/*</url-pattern>
         <url-pattern>/rest/api/*/download/*</url-pattern>
-        <description>Adds watermarks to PDF exports and image/PDF downloads</description>
+        <description>Adds watermarks to PDF exports and downloads</description>
     </servlet-filter>
 
 </atlassian-plugin>

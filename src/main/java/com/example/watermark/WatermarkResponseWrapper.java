@@ -10,6 +10,8 @@ import java.io.PrintWriter;
 
 public class WatermarkResponseWrapper extends HttpServletResponseWrapper {
 
+    private static final long serialVersionUID = 1L;
+
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     private ServletOutputStream outputStream;
     private PrintWriter writer;

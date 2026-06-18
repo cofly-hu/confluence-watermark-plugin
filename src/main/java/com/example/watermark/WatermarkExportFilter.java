@@ -13,15 +13,25 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class WatermarkExportFilter implements Filter {
 
     private static final Logger log = LoggerFactory.getLogger(WatermarkExportFilter.class);
     private static final long MAX_WATERMARK_SIZE = 50 * 1024 * 1024;
+    private static final int CACHE_MAX_SIZE = 1000;
 
-    private static final ConcurrentHashMap<String, Boolean> SKIP_CACHE = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, Boolean> PROCESS_CACHE = new ConcurrentHashMap<>();
+    private static final byte TYPE_SKIP = 0;
+    private static final byte TYPE_PDF = 1;
+    private static final byte TYPE_ZIP = 2;
+
+    private static final Map<String, Byte> ROUTE_CACHE = new LinkedHashMap<String, Byte>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Byte> eldest) {
+            return size() > CACHE_MAX_SIZE;
+        }
+    };
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -36,14 +46,19 @@ public class WatermarkExportFilter implements Filter {
         String uri = httpRequest.getRequestURI();
         String queryString = httpRequest.getQueryString() != null ? httpRequest.getQueryString() : "";
 
-        if (SKIP_CACHE.containsKey(uri)) {
-            chain.doFilter(request, response);
-            return;
-        }
-
-        if (PROCESS_CACHE.containsKey(uri)) {
-            handlePdfWatermark(httpRequest, httpResponse, chain);
-            return;
+        Byte cachedType = ROUTE_CACHE.get(uri);
+        if (cachedType != null) {
+            switch (cachedType) {
+                case TYPE_PDF:
+                    handlePdfWatermark(httpRequest, httpResponse, chain);
+                    return;
+                case TYPE_ZIP:
+                    handleZipWatermark(httpRequest, httpResponse, chain);
+                    return;
+                default:
+                    chain.doFilter(request, response);
+                    return;
+            }
         }
 
         boolean isPdfExport = uri.contains("exportpdf") || uri.contains("exportPageToPdf") ||
@@ -53,12 +68,13 @@ public class WatermarkExportFilter implements Filter {
                 uri.contains("downloadAllAttachments") || uri.contains("batchDownloadAttachments");
 
         if (isPdfExport || isPdfAttachment) {
-            PROCESS_CACHE.put(uri, Boolean.TRUE);
+            ROUTE_CACHE.put(uri, TYPE_PDF);
             handlePdfWatermark(httpRequest, httpResponse, chain);
         } else if (isZipDownload) {
+            ROUTE_CACHE.put(uri, TYPE_ZIP);
             handleZipWatermark(httpRequest, httpResponse, chain);
         } else {
-            SKIP_CACHE.put(uri, Boolean.TRUE);
+            ROUTE_CACHE.put(uri, TYPE_SKIP);
             chain.doFilter(request, response);
         }
     }
@@ -107,7 +123,6 @@ public class WatermarkExportFilter implements Filter {
 
     @Override
     public void destroy() {
-        SKIP_CACHE.clear();
-        PROCESS_CACHE.clear();
+        ROUTE_CACHE.clear();
     }
 }
