@@ -39,7 +39,10 @@ public class ImageWatermarkProcessor {
             int width = originalImage.getWidth();
             int height = originalImage.getHeight();
 
-            BufferedImage watermarkedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            boolean isJpg = "jpg".equalsIgnoreCase(formatName) || "jpeg".equalsIgnoreCase(formatName);
+            int imageType = isJpg ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
+
+            BufferedImage watermarkedImage = new BufferedImage(width, height, imageType);
             Graphics2D g2d = watermarkedImage.createGraphics();
             g2d.drawImage(originalImage, 0, 0, null);
 
