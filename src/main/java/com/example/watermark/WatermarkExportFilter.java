@@ -36,38 +36,25 @@ public class WatermarkExportFilter implements Filter {
         String uri = httpRequest.getRequestURI();
         String queryString = httpRequest.getQueryString() != null ? httpRequest.getQueryString() : "";
 
-        String cacheKey = uri + "?" + queryString;
-
         if (SKIP_CACHE.containsKey(uri)) {
             chain.doFilter(request, response);
             return;
         }
 
         if (PROCESS_CACHE.containsKey(uri)) {
-            String type = PROCESS_CACHE.get(uri) ? "pdf" : isImageFile(uri) ? "image" : null;
-            if (type != null) {
-                if ("pdf".equals(type)) {
-                    handlePdfWatermark(httpRequest, httpResponse, chain);
-                } else {
-                    handleImageWatermark(httpRequest, httpResponse, chain, uri);
-                }
-                return;
-            }
+            handlePdfWatermark(httpRequest, httpResponse, chain);
+            return;
         }
 
         boolean isPdfExport = uri.contains("exportpdf") || uri.contains("exportPageToPdf") ||
                 uri.contains("/spaces/flyingpdf/pdfpageexport.action");
         boolean isPdfAttachment = uri.contains("/download/") && uri.endsWith(".pdf");
-        boolean isImageAttachment = uri.contains("/download/") && isImageFile(uri);
         boolean isZipDownload = uri.endsWith(".zip") || queryString.contains("zip=true") ||
                 uri.contains("downloadAllAttachments") || uri.contains("batchDownloadAttachments");
 
         if (isPdfExport || isPdfAttachment) {
             PROCESS_CACHE.put(uri, Boolean.TRUE);
             handlePdfWatermark(httpRequest, httpResponse, chain);
-        } else if (isImageAttachment) {
-            PROCESS_CACHE.put(uri, Boolean.FALSE);
-            handleImageWatermark(httpRequest, httpResponse, chain, uri);
         } else if (isZipDownload) {
             handleZipWatermark(httpRequest, httpResponse, chain);
         } else {
@@ -90,29 +77,6 @@ public class WatermarkExportFilter implements Filter {
             }
             byte[] watermarkedBytes = PdfWatermarkProcessor.addWatermark(originalBytes);
             writeResponse(response, watermarkedBytes, "application/pdf");
-        }
-    }
-
-    private void handleImageWatermark(HttpServletRequest request, HttpServletResponse response,
-                                       FilterChain chain, String uri) throws IOException, ServletException {
-        String format = "png";
-        String contentType = "image/png";
-        if (uri.endsWith(".jpg") || uri.endsWith(".jpeg")) { format = "jpg"; contentType = "image/jpeg"; }
-        else if (uri.endsWith(".gif")) { format = "gif"; contentType = "image/gif"; }
-        else if (uri.endsWith(".bmp")) { format = "bmp"; contentType = "image/bmp"; }
-
-        WatermarkResponseWrapper wrapper = new WatermarkResponseWrapper(response);
-        chain.doFilter(request, wrapper);
-
-        byte[] originalBytes = wrapper.getBytes();
-        if (originalBytes != null && originalBytes.length > 0) {
-            if (originalBytes.length > MAX_WATERMARK_SIZE) {
-                log.warn("Image too large for watermark ({} bytes), skipping", originalBytes.length);
-                writeResponse(response, originalBytes, contentType);
-                return;
-            }
-            byte[] watermarkedBytes = ImageWatermarkProcessor.addWatermark(originalBytes, format);
-            writeResponse(response, watermarkedBytes, contentType);
         }
     }
 
@@ -139,12 +103,6 @@ public class WatermarkExportFilter implements Filter {
         OutputStream out = response.getOutputStream();
         out.write(bytes);
         out.flush();
-    }
-
-    private boolean isImageFile(String uri) {
-        String lower = uri.toLowerCase();
-        return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
-               lower.endsWith(".gif") || lower.endsWith(".bmp");
     }
 
     @Override

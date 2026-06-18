@@ -44,9 +44,6 @@ public class ZipWatermarkProcessor {
 
                 if (isPdfFile(name)) {
                     entryBytes = PdfWatermarkProcessor.addWatermark(entryBytes);
-                } else if (isImageFile(name)) {
-                    String format = getFormat(name);
-                    entryBytes = ImageWatermarkProcessor.addWatermark(entryBytes, format);
                 }
 
                 ZipEntry newEntry = new ZipEntry(name);
@@ -87,20 +84,5 @@ public class ZipWatermarkProcessor {
 
     private static boolean isPdfFile(String name) {
         return name != null && name.toLowerCase().endsWith(".pdf");
-    }
-
-    private static boolean isImageFile(String name) {
-        if (name == null) return false;
-        String lower = name.toLowerCase();
-        return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
-               lower.endsWith(".gif") || lower.endsWith(".bmp");
-    }
-
-    private static String getFormat(String name) {
-        String lower = name.toLowerCase();
-        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "jpg";
-        if (lower.endsWith(".gif")) return "gif";
-        if (lower.endsWith(".bmp")) return "bmp";
-        return "png";
     }
 }
